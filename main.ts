@@ -14,6 +14,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PNG_SIG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+// A whole PNG ends with the 12-byte IEND chunk: zero length, the
+// ASCII type "IEND", and the fixed CRC ae 42 60 82.
+const PNG_IEND = Buffer.from([
+  0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+]);
 const BYTE_CAP = 1024 * 1024;
 const SIDE_CAP = 1024;
 const WANT_W = 680;
@@ -40,6 +45,10 @@ function checkPng(bytes) {
   }
   if (w !== WANT_W || h !== WANT_H) {
     reject(`is ${w}x${h}, expected ${WANT_W}x${WANT_H}`);
+  }
+  if (bytes.length < PNG_IEND.length ||
+      !bytes.subarray(bytes.length - PNG_IEND.length).equals(PNG_IEND)) {
+    reject("does not end with the IEND chunk: not a whole PNG");
   }
 }
 
